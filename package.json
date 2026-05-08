@@ -1,0 +1,25 @@
+{
+  "name": "sonarr-quality-inspector",
+  "version": "1.0.0",
+  "description": "Visual tool to identify episodes with lower quality than the season dominant quality in Sonarr",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "helmet": "^7.1.0",
+    "http-proxy-middleware": "^3.0.0",
+    "express-rate-limit": "^7.1.5",
+    "cors": "^2.8.5",
+    "node-fetch": "^2.7.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "license": "MIT"
+}

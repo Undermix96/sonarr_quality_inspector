@@ -1,0 +1,38 @@
+services:
+  sonarr-quality-inspector:
+    build: .
+    image: sonarr-quality-inspector:latest
+    container_name: sonarr-quality-inspector
+    restart: unless-stopped
+    ports:
+      - "${EXTERNAL_PORT:-3000}:${PORT:-3000}"
+    environment:
+      # Required: Sonarr connection
+      SONARR_URL: ${SONARR_URL}
+      SONARR_API_KEY: ${SONARR_API_KEY}
+
+      # Optional: comma-separated list of allowed CORS origins.
+      # Set this if you access the app from a different domain/port.
+      # Example: https://inspector.example.com,https://home.example.com
+      # Leave empty to allow same-origin requests only (recommended).
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-}
+
+      # Optional: internal port (default 3000)
+      PORT: ${PORT:-3000}
+
+    # Uncomment and set network_mode if Sonarr is on the same Docker network
+    # and you want to reach it via hostname (e.g. http://sonarr:8989).
+    # networks:
+    #   - sonarr-net
+
+    # Security hardening
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+
+# networks:
+#   sonarr-net:
+#     external: true
+#     name: sonarr_default   # adjust to your existing network name
