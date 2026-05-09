@@ -24,34 +24,15 @@ A lightweight self-hosted web UI that connects to your [Sonarr](https://sonarr.t
 
 ## Quick start
 
-Build and deploy are intentionally **separate steps** — you build the image once and deploy it with Docker Compose anywhere.
+Build and deploy are intentionally **separate steps**.
 
 ### 1. Build the image
 
 ```bash
 git clone https://github.com/undermix/sonarr-quality-inspector.git
 cd sonarr-quality-inspector
-
-# Build latest
-./build.sh
-
-# Build a versioned release
-./build.sh 1.0.0
-
-# Build and push to Docker Hub
-./build.sh 1.0.0 --push
-```
-
-The script supports multi-arch builds (`linux/amd64` + `linux/arm64`).
-Make sure Docker Buildx is available (`docker buildx version`).
-
-Or build manually:
-
-```bash
 docker build -t undermix/sonarr-quality-inspector:latest .
 ```
-
----
 
 ### 2. Deploy with Docker Compose
 
@@ -65,7 +46,7 @@ Get your API key from **Sonarr → Settings → General → Security → API Key
 
 Open `http://localhost:3000` in your browser.
 
-> **Note:** `docker-compose.yml` pulls the pre-built image `undermix/sonarr-quality-inspector:latest` — it does not build from source. Run `build.sh` (or `docker build`) separately whenever you want to update the image.
+> **Note:** `docker-compose.yml` uses the pre-built image `undermix/sonarr-quality-inspector:latest` and does not build from source. Run `docker build` separately whenever you want to update the image.
 
 ---
 
@@ -110,7 +91,7 @@ Then set `SONARR_URL=http://sonarr:8989` in your `.env`.
 
 ## Reverse proxy setup
 
-### Nginx (recommended)
+### Nginx
 
 ```nginx
 server {
