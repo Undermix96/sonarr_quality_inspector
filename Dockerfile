@@ -13,6 +13,11 @@ COPY src/ ./src/
 # ── Runtime stage ───────────────────────────────────────────────────────────
 FROM node:20-alpine AS runtime
 
+LABEL org.opencontainers.image.title="Sonarr Quality Inspector" \
+      org.opencontainers.image.description="Visual tool to identify episodes with lower quality than their season dominant in Sonarr" \
+      org.opencontainers.image.source="https://github.com/undermix/sonarr-quality-inspector" \
+      org.opencontainers.image.licenses="MIT"
+
 # Security: run as non-root user
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 

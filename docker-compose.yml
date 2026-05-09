@@ -1,7 +1,6 @@
 services:
   sonarr-quality-inspector:
-    build: .
-    image: sonarr-quality-inspector:latest
+    image: undermix/sonarr-quality-inspector:latest
     container_name: sonarr-quality-inspector
     restart: unless-stopped
     ports:

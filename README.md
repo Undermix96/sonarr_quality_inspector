@@ -24,29 +24,48 @@ A lightweight self-hosted web UI that connects to your [Sonarr](https://sonarr.t
 
 ## Quick start
 
-### 1. Clone the repo
+Build and deploy are intentionally **separate steps** — you build the image once and deploy it with Docker Compose anywhere.
+
+### 1. Build the image
 
 ```bash
-git clone https://github.com/your-username/sonarr-quality-inspector.git
+git clone https://github.com/undermix/sonarr-quality-inspector.git
 cd sonarr-quality-inspector
+
+# Build latest
+./build.sh
+
+# Build a versioned release
+./build.sh 1.0.0
+
+# Build and push to Docker Hub
+./build.sh 1.0.0 --push
 ```
 
-### 2. Configure environment
+The script supports multi-arch builds (`linux/amd64` + `linux/arm64`).
+Make sure Docker Buildx is available (`docker buildx version`).
+
+Or build manually:
+
+```bash
+docker build -t undermix/sonarr-quality-inspector:latest .
+```
+
+---
+
+### 2. Deploy with Docker Compose
 
 ```bash
 cp .env.example .env
-# Edit .env with your Sonarr URL and API key
+# Edit .env with your SONARR_URL and SONARR_API_KEY
+docker compose up -d
 ```
 
 Get your API key from **Sonarr → Settings → General → Security → API Key**.
 
-### 3. Run with Docker Compose
-
-```bash
-docker compose up -d
-```
-
 Open `http://localhost:3000` in your browser.
+
+> **Note:** `docker-compose.yml` pulls the pre-built image `undermix/sonarr-quality-inspector:latest` — it does not build from source. Run `build.sh` (or `docker build`) separately whenever you want to update the image.
 
 ---
 
@@ -101,7 +120,6 @@ server {
     ssl_certificate     /path/to/fullchain.pem;
     ssl_certificate_key /path/to/privkey.pem;
 
-    # Security headers (supplement those set by the app)
     add_header X-Robots-Tag "noindex, nofollow" always;
 
     location / {
@@ -152,18 +170,6 @@ For same-origin access (the normal case), leave it empty.
 - Security headers (CSP, HSTS, X-Frame-Options, etc.) are set by the Express backend via `helmet`.
 - Rate limiting is applied on all API endpoints.
 - If you expose this publicly, protect it with an authentication layer (e.g. Authelia, Authentik, Cloudflare Access, or your reverse proxy's basic auth).
-
----
-
-## Building manually
-
-```bash
-docker build -t sonarr-quality-inspector .
-docker run -p 3000:3000 \
-  -e SONARR_URL=http://192.168.1.50:8989 \
-  -e SONARR_API_KEY=your_key_here \
-  sonarr-quality-inspector
-```
 
 ---
 
