@@ -1,5 +1,7 @@
 # ── Build stage ────────────────────────────────────────────────────────────
-FROM node:20-alpine AS builder
+# Build always runs on the host native arch (fast, no emulation).
+# BUILDPLATFORM = host arch; TARGETPLATFORM = target arch (amd64 / arm64).
+FROM --platform=$BUILDPLATFORM node:20-alpine AS builder
 
 WORKDIR /app
 
@@ -11,7 +13,8 @@ RUN npm ci --omit=dev
 COPY src/ ./src/
 
 # ── Runtime stage ───────────────────────────────────────────────────────────
-FROM node:20-alpine AS runtime
+# Runtime must be the TARGET platform so the final image runs on the right arch.
+FROM --platform=$TARGETPLATFORM node:20-alpine AS runtime
 
 LABEL org.opencontainers.image.title="Sonarr Quality Inspector" \
       org.opencontainers.image.description="Visual tool to identify episodes with lower quality than their season dominant in Sonarr" \
