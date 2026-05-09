@@ -10,18 +10,21 @@ const fetch = require('node-fetch');
 const app = express();
 const PORT = parseInt(process.env.PORT || '3000', 10);
 
-const SONARR_URL = (process.env.SONARR_URL || '').replace(/\/$/, '');
+const SONARR_URL    = (process.env.SONARR_URL || '').replace(/\/$/, '');
 const SONARR_API_KEY = process.env.SONARR_API_KEY || '';
 const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS || '';
+
+// Enable HSTS only when explicitly running behind a reverse proxy with valid SSL.
+// Leaving this false on plain HTTP prevents browsers from caching HSTS and
+// permanently upgrading all future requests to HTTPS.
+const TRUST_PROXY = process.env.TRUST_PROXY === 'true';
 
 if (!SONARR_URL || !SONARR_API_KEY) {
   console.error('[ERROR] SONARR_URL and SONARR_API_KEY environment variables are required.');
   process.exit(1);
 }
 
-// ── Security headers ─────────────────────────────────────────────────────────
-// CSS and JS are inlined in index.html, so 'unsafe-inline' is required.
-// No external resources are loaded — connectSrc is self-only (API proxy).
+// ── Security headers ──────────────────────────────────────────────────────────
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -39,16 +42,14 @@ app.use(helmet({
     },
   },
   crossOriginEmbedderPolicy: false,
-  hsts: {
-    maxAge: 31536000,
-    includeSubDomains: true,
-    preload: true,
-  },
+  hsts: TRUST_PROXY
+    ? { maxAge: 31536000, includeSubDomains: true, preload: true }
+    : false,
 }));
 
 app.disable('x-powered-by');
 
-// ── CORS ─────────────────────────────────────────────────────────────────────
+// ── CORS ──────────────────────────────────────────────────────────────────────
 const allowedOrigins = ALLOWED_ORIGINS
   ? ALLOWED_ORIGINS.split(',').map(o => o.trim()).filter(Boolean)
   : [];
@@ -58,7 +59,7 @@ app.use(cors({
     if (!origin) return callback(null, true);
     if (allowedOrigins.length === 0) return callback(new Error('CORS not configured'), false);
     if (allowedOrigins.includes(origin)) return callback(null, true);
-    return callback(new Error(`CORS blocked: ${origin}`), false);
+    return callback(new Error('CORS blocked: ' + origin), false);
   },
   methods: ['GET'],
   allowedHeaders: ['Content-Type'],
@@ -67,18 +68,13 @@ app.use(cors({
 
 // ── Rate limiting ─────────────────────────────────────────────────────────────
 const apiLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: 120,
-  standardHeaders: true,
-  legacyHeaders: false,
+  windowMs: 60 * 1000, max: 120,
+  standardHeaders: true, legacyHeaders: false,
   message: { error: 'Too many requests, please slow down.' },
 });
-
 const heavyLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: 10,
-  standardHeaders: true,
-  legacyHeaders: false,
+  windowMs: 60 * 1000, max: 10,
+  standardHeaders: true, legacyHeaders: false,
   message: { error: 'Too many scan requests, please wait.' },
 });
 
@@ -91,7 +87,7 @@ async function sonarrFetch(sonarrPath, query) {
     timeout: 30000,
   });
   if (!response.ok) {
-    const err = new Error(`Sonarr returned ${response.status}`);
+    const err = new Error('Sonarr returned ' + response.status);
     err.status = response.status;
     throw err;
   }
@@ -101,19 +97,12 @@ async function sonarrFetch(sonarrPath, query) {
 // ── API routes ────────────────────────────────────────────────────────────────
 const router = express.Router();
 
-router.get('/health', (req, res) => {
-  res.json({ status: 'ok' });
-});
+router.get('/health', (req, res) => res.json({ status: 'ok' }));
 
 router.get('/sonarr/series', heavyLimiter, async (req, res) => {
   try {
     const data = await sonarrFetch('/api/v3/series', {});
-    res.json(data.map(s => ({
-      id: s.id,
-      title: s.title,
-      seasonCount: s.seasonCount,
-      status: s.status,
-    })));
+    res.json(data.map(s => ({ id: s.id, title: s.title, seasonCount: s.seasonCount, status: s.status })));
   } catch (e) {
     console.error('[sonarr/series]', e.message);
     res.status(e.status || 502).json({ error: e.message });
@@ -126,13 +115,9 @@ router.get('/sonarr/episode', apiLimiter, async (req, res) => {
   try {
     const data = await sonarrFetch('/api/v3/episode', { seriesId });
     res.json(data.map(e => ({
-      id: e.id,
-      seriesId: e.seriesId,
-      seasonNumber: e.seasonNumber,
-      episodeNumber: e.episodeNumber,
-      title: e.title,
-      hasFile: e.hasFile,
-      episodeFileId: e.episodeFileId,
+      id: e.id, seriesId: e.seriesId,
+      seasonNumber: e.seasonNumber, episodeNumber: e.episodeNumber,
+      title: e.title, hasFile: e.hasFile, episodeFileId: e.episodeFileId,
     })));
   } catch (e) {
     console.error('[sonarr/episode]', e.message);
@@ -145,11 +130,7 @@ router.get('/sonarr/episodefile', apiLimiter, async (req, res) => {
   if (!seriesId || isNaN(seriesId)) return res.status(400).json({ error: 'Missing or invalid seriesId' });
   try {
     const data = await sonarrFetch('/api/v3/episodefile', { seriesId });
-    res.json(data.map(f => ({
-      id: f.id,
-      seriesId: f.seriesId,
-      quality: f.quality,
-    })));
+    res.json(data.map(f => ({ id: f.id, seriesId: f.seriesId, quality: f.quality })));
   } catch (e) {
     console.error('[sonarr/episodefile]', e.message);
     res.status(e.status || 502).json({ error: e.message });
@@ -160,10 +141,7 @@ app.use('/api', router);
 
 // ── Static frontend ───────────────────────────────────────────────────────────
 app.use(express.static(path.join(__dirname, 'public'), {
-  etag: true,
-  lastModified: true,
-  maxAge: '1h',
-  index: 'index.html',
+  etag: true, lastModified: true, maxAge: '1h', index: 'index.html',
 }));
 
 app.get('*', (req, res) => {
@@ -179,7 +157,8 @@ app.use((err, req, res, next) => {
 
 // ── Start ─────────────────────────────────────────────────────────────────────
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`[sonarr-quality-inspector] Listening on port ${PORT}`);
-  console.log(`[sonarr-quality-inspector] Sonarr: ${SONARR_URL}`);
-  console.log(`[sonarr-quality-inspector] CORS: ${allowedOrigins.length ? allowedOrigins.join(', ') : 'same-origin only'}`);
+  console.log('[sonarr-quality-inspector] Port    :', PORT);
+  console.log('[sonarr-quality-inspector] Sonarr  :', SONARR_URL);
+  console.log('[sonarr-quality-inspector] HSTS    :', TRUST_PROXY ? 'enabled' : 'disabled (set TRUST_PROXY=true behind SSL reverse proxy)');
+  console.log('[sonarr-quality-inspector] CORS    :', allowedOrigins.length ? allowedOrigins.join(', ') : 'same-origin only');
 });

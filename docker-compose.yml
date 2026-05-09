@@ -10,6 +10,10 @@ services:
       SONARR_URL: ${SONARR_URL}
       SONARR_API_KEY: ${SONARR_API_KEY}
 
+      # Set to true ONLY when behind a reverse proxy with valid SSL (enables HSTS).
+      # Never set to true on plain HTTP.
+      TRUST_PROXY: ${TRUST_PROXY:-false}
+
       # Optional: comma-separated list of allowed CORS origins.
       # Set this if you access the app from a different domain/port.
       # Example: https://inspector.example.com,https://home.example.com
